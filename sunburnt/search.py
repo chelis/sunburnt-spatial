@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import collections, copy, operator, re
-
 from .schema import SolrError, SolrBooleanField, SolrUnicodeField, WildcardFieldInstance
 
 
@@ -361,7 +360,7 @@ class LuceneQuery(object):
 class BaseSearch(object):
     """Base class for common search options management"""
     option_modules = ('query_obj', 'filter_obj', 'paginator',
-                      'more_like_this', 'highlighter', 'faceter', 'facet_ranger',
+                      'more_like_this', 'grouping', 'highlighter', 'faceter', 'facet_ranger',
                       'sorter', 'facet_querier', 'field_limiter',)
 
     result_constructor = dict
@@ -370,6 +369,7 @@ class BaseSearch(object):
         self.query_obj = LuceneQuery(self.schema, u'q')
         self.filter_obj = LuceneQuery(self.schema, u'fq')
         self.paginator = PaginateOptions(self.schema)
+        self.grouping = GroupingOptions(self.schema)
         self.highlighter = HighlightOptions(self.schema)
         self.faceter = FacetOptions(self.schema)
         self.facet_ranger = FacetRangeOptions(self.schema)
@@ -601,6 +601,7 @@ class SolrSearch(BaseSearch):
         options = super(SolrSearch, self).options()
         if 'q' not in options:
             options['q'] = '*:*' # search everything
+
         return options
 
     def execute(self, constructor=None):
@@ -805,6 +806,39 @@ class FacetRangeOptions(Options):
         if fields:
             for field in fields:
                 opts["facet.range"] = field
+
+        return opts
+
+class GroupingOptions(Options):
+    option_name="group"
+    opts = {
+        'limit': int,
+        'main': bool,
+    }
+    def __init__(self, schema, original=None):
+        self.schema = schema
+        if original is None:
+            self.fields = collections.defaultdict(dict)
+        else:
+            self.fields = copy.copy(original.fields)
+
+    def options(self):
+        opts = {}
+        if self.fields:
+            opts[self.option_name] = True
+            fields = [field for field in self.fields.keys() if field]
+            self.field_names_in_opts(opts, fields)
+
+            for field_name, field_opts in self.fields.items():
+                if field_name:
+                    for field_opt, v in field_opts.items():
+                        opts['group.%s'%(field_opt)] = v
+        return opts
+
+    def field_names_in_opts(self, opts, fields):
+        if fields:
+            for field in fields:
+                opts["group.field"] = field
 
         return opts
 
