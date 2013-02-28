@@ -355,11 +355,56 @@ class LuceneQuery(object):
             value = field.instance_from_user_data(v)
         self.boosts.append((kwargs, boost_score))
 
+class SpatialQuery(object):
+    def __init__(self, schema, type='bbox', original=None):
+        self.schema = schema
+        if original is None:
+            self.type = type
+            self.field = None
+            self.point = (None, None)
+            self.distance = 0
+        else:
+            self.type = original.type
+            self.field = original.field
+            self.point = original.point
+            self.distance = original.distance
 
+    def clone(self):
+        return SpatialQuery(self.schema, original=self)
+
+    def add(self, kwargs):
+        try:
+            distance = kwargs.pop('distance')
+            field_name, point = kwargs.items().pop()
+            field = self.schema.match_field(field_name)
+            print type(field)
+        except KeyError:
+            raise SolrError('For spatial filtering distance option is mandatory.')
+        except ValueError:
+            raise SolrError('Wrong parameter given. Cannot extract field and point.')
+
+        if not field:
+            raise SolrError('Field %s does not exist in schema.' % field_name)
+
+        self.field = field
+        self.point = point
+        self.distance = distance
+
+    def options(self):
+        opts = {}
+        if self.field:
+            opts.update({
+                'fq': '{!%s}' % self.type,
+                'sfield': self.field.name,
+                'pt': ','.join(str(p) for p in self.point),
+                'd': self.distance,
+            })
+
+        return opts
 
 class BaseSearch(object):
     """Base class for common search options management"""
-    option_modules = ('query_obj', 'filter_obj', 'paginator',
+    option_modules = ('query_obj', 'filter_obj', 'spatial_obj', 'paginator',
                       'more_like_this', 'grouping', 'highlighter', 'faceter', 'facet_ranger',
                       'sorter', 'facet_querier', 'field_limiter',)
 
@@ -368,6 +413,7 @@ class BaseSearch(object):
     def _init_common_modules(self):
         self.query_obj = LuceneQuery(self.schema, u'q')
         self.filter_obj = LuceneQuery(self.schema, u'fq')
+        self.spatial_obj = SpatialQuery(self.schema)
         self.paginator = PaginateOptions(self.schema)
         self.grouping = GroupingOptions(self.schema)
         self.highlighter = HighlightOptions(self.schema)
@@ -426,6 +472,11 @@ class BaseSearch(object):
     def filter_exclude(self, *args, **kwargs):
         # cloning will be done by filter
         return self.filter(~self.Q(*args, **kwargs))
+
+    def filter_spatial(self, *args, **kwargs):
+        newself = self.clone()
+        newself.spatial_obj.add(kwargs)
+        return newself
 
     def facet_by(self, field, **kwargs):
         newself = self.clone()

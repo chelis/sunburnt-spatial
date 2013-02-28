@@ -171,7 +171,11 @@ class SolrUnicodeField(SolrField):
         if isinstance(value, SolrString):
             return value
         else:
-            return WildcardString(unicode(value))
+            try:
+                return WildcardString(unicode(value))
+            except UnicodeDecodeError as e:
+                print value
+                raise e
 
     def to_query(self, value):
         return value.escape_for_lqs_term()
@@ -306,6 +310,8 @@ class SolrPointField(SolrField):
 class SolrPoint2Field(SolrPointField):
     dimension = 2
 
+class SolrLatLonField(SolrPointField):
+    dimension = 2
 
 def SolrFieldTypeFactory(cls, name, **kwargs):
     atts = {'stored':True, 'indexed':True}
@@ -389,7 +395,7 @@ class SolrSchema(object):
         'solr.UUIDField':SolrUUIDField,
         'solr.BinaryField':SolrBinaryField,
         'solr.PointType':SolrPointField,
-        'solr.LatLonType':SolrPoint2Field,
+        'solr.LatLonType':SolrLatLonField,
         'solr.GeoHashField':SolrPoint2Field,
     }
     def __init__(self, f):

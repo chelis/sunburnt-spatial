@@ -2,10 +2,9 @@ from __future__ import absolute_import
 import cgi
 import cStringIO as StringIO
 from itertools import islice
-import logging
 import socket, time, urllib, urlparse
 import warnings
-
+import logging
 
 from .schema import SolrSchema, SolrError
 from .search import LuceneQuery, MltSolrSearch, SolrSearch, params_from_dict
@@ -101,7 +100,7 @@ class SolrConnection(object):
     def select(self, params):
         qs = urllib.urlencode(params)
         url = "%s?%s" % (self.select_url, qs)
-        logging.debug(url)
+        logging.debug('sunburnt query:' + url)
         if len(url) > self.max_length_get_url:
             warnings.warn("Long query URL encountered - POSTing instead of "
                 "GETting. This query will not be cached at the HTTP layer")

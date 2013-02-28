@@ -44,3 +44,42 @@ Dependencies
 - Optional (only to run the tests)
 
   * `nose <http://somethingaboutorange.com/mrl/projects/nose/>`_
+
+Additions
+=========
+Forked by Károly "Charles" Nagy to add some essential feature for other projects.
+
+- Range facets:
+
+    Every range field can be set separately in order to fulfill the requirements. 
+    The facet_ranger.update() method takes a dictionary with the field names and 
+	the essential parameters (start, end and gap)
+	
+	Example:
+	
+{{{
+from sunburnt import SolrInterface
+si = SolrInterface('http://some.url:8983/solr/')
+si.query('Query')
+si.facet_ranger.update({
+    'price':
+        {'range.start': 1, 'range.end': 99999, 'range.gap': 5000}
+})
+}}}
+	
+	* `More info <http://charlesnagy.info/it/python/solr-python-interface-sunburnt-fork>`_
+	
+- Spatial index:
+
+    Spatial filtering is now available through sunburnt with filter_spatial function. 
+	
+	Example:
+	
+{{{
+from sunburnt import SolrInterface
+SOLR_URL = 'http://some.url:8983/solr/'
+_s = SolrInterface(SOLR_URL)
+_s.query('*')
+_s.filter_spatial(latlon=(47.4775899,18.8108992), distance=10)
+}}}
+
