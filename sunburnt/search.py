@@ -356,18 +356,20 @@ class LuceneQuery(object):
         self.boosts.append((kwargs, boost_score))
 
 class SpatialQuery(object):
-    def __init__(self, schema, type='bbox', original=None):
+    def __init__(self, schema, type='bbox', qgeodist=True, original=None):
         self.schema = schema
         if original is None:
             self.type = type
             self.field = None
             self.point = (None, None)
             self.distance = 0
+            self.qgeodist = qgeodist
         else:
             self.type = original.type
             self.field = original.field
             self.point = original.point
             self.distance = original.distance
+            self.qgeodist = original.qgeodist
 
     def clone(self):
         return SpatialQuery(self.schema, original=self)
@@ -377,7 +379,6 @@ class SpatialQuery(object):
             distance = kwargs.pop('distance')
             field_name, point = kwargs.items().pop()
             field = self.schema.match_field(field_name)
-            print type(field)
         except KeyError:
             raise SolrError('For spatial filtering distance option is mandatory.')
         except ValueError:
@@ -399,6 +400,12 @@ class SpatialQuery(object):
                 'pt': ','.join(str(p) for p in self.point),
                 'd': self.distance,
             })
+            # Solr 3.x workaround for retrieving the distance
+            # More info: http://wiki.apache.org/solr/SpatialSearch#Returning_the_distance
+            if self.qgeodist:
+                opts.update({
+                    'q': '{!func}geodist()',
+                })
 
         return opts
 
