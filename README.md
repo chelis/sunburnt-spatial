@@ -78,5 +78,18 @@ Example:
 	_s.query('*')
 	_s.filter_spatial(latlon=(47.4775899,18.8108992), distance=10)
 
+## Dataimport handler: ##	
+
+I had to trigger the dataimporter delta-import command from the code so I added support for this function. 
+
+Example:
+
+	from sunburnt import SolrInterface
+	SOLR_URL = 'http://some.url:8983/solr/'
+	_s = SolrInterface(SOLR_URL)
+	_s.dataimport('delta-import')
+	_response = _s.dataimport('status')
+	print _response.import_status
+	
 You can find me on [Twitter](https://twitter.com/charlesnagy "Charlesnagy Twitter"), [My Blog](http://charlesnagy.info/ "Charlesnagy.info") or [LinkedIn]("http://www.linkedin.com/in/nkaroly" "Károly Nagy - MySQL DBA")
 

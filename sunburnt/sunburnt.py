@@ -23,6 +23,7 @@ class SolrConnection(object):
         self.update_url = self.url + "update/"
         self.select_url = self.url + "select/"
         self.mlt_url = self.url + "mlt/"
+        self.dataimport_url = self.url + "dataimport/"
         self.retry_timeout = retry_timeout
         self.max_length_get_url = max_length_get_url
 
@@ -42,6 +43,15 @@ class SolrConnection(object):
     def optimize(self, waitSearcher=None, maxSegments=None):
         response = self.update('<optimize/>', optimize=True,
             waitSearcher=waitSearcher, maxSegments=maxSegments)
+
+    def dataimport(self, command='status'):
+        url = "%s?%s" % (self.dataimport_url, urllib.urlencode({'command': command}))
+        r, c = self.request(url, method="GET")
+
+        if r.status != 200:
+            raise SolrError(r, c)
+
+        return c
 
     # For both commit & optimize above, we use the XML body instead
     # of the URL parameter, because if we're using POST (which we
@@ -203,6 +213,10 @@ class SolrInterface(object):
             raise TypeError("This Solr instance is only for reading")
         # When deletion is fixed to escape query strings, this will need fixed.
         self.delete(queries=self.Q(**{"*":"*"}))
+
+    def dataimport(self, command='status'):
+        # Todo write the parser for the returned xml
+        return self.schema.parse_response(self.conn.dataimport(command))
 
     def search(self, **kwargs):
         if not self.readable:

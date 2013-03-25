@@ -659,8 +659,14 @@ class SolrResponse(object):
             setattr(self, attr, details['responseHeader'].get(attr))
         if self.status != 0:
             raise ValueError("Response indicates an error")
-        result_node = doc.xpath("/response/result")[0]
-        self.result = SolrResult(schema, result_node)
+
+        if doc.xpath("/response/result"):
+            result_node = doc.xpath("/response/result")[0]
+            self.result = SolrResult(schema, result_node)
+        elif doc.xpath("/response/str[@name='importResponse']"):
+            status_node = doc.xpath("/response/lst[@name='statusMessages']")[0]
+            self.import_status = SolrImportStatus(status_node)
+
         self.facet_counts = SolrFacetCounts.from_response(details)
         self.highlighting = dict((k, dict(v))
                                  for k, v in details.get("highlighting", ()))
@@ -692,6 +698,32 @@ class SolrResponse(object):
     def __getitem__(self, key):
         return self.result.docs[key]
 
+class SolrImportStatus(object):
+    markers = [
+        ('Total Requests made to DataSource', 'requests'),
+        ('Total Rows Fetched', 'rows_fetched'),
+        ('Total Documents Skipped', 'docs_skipped'),
+        ('Full Dump Started', 'full_started'),
+        ('Delta Dump started', 'delta_started'),
+        ('Committed', 'committed'),
+        ('Optimized', 'optimized'),
+        ('Total Changed Documents', 'docs_changed'),
+        ('Total Documents Processed', 'docs_processed'),
+        ('Time taken ', 'time_taken'),
+    ]
+
+    def __init__(self, node):
+        self.name = node.attrib['name']
+        for marker, key in self.markers:
+            _el = node.xpath("str[@name='%s']" % marker)
+            if _el:
+                setattr(self, key, _el[0].text)
+
+    def __str__(self):
+        return "Added/updated %{added}s document in %{time}s time." % {
+            'added': self.docs_processed,
+            'time': self.time_taken
+        }
 
 class SolrResult(object):
     def __init__(self, schema, node):
