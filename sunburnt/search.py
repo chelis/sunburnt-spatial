@@ -523,7 +523,17 @@ class BaseSearch(object):
     def options(self):
         options = {}
         for option_module in self.option_modules:
-            options.update(getattr(self, option_module).options())
+            # More fq parameter is possible from different modules
+            # We need to handle this situation and not overwrite previous values
+            _module_options = getattr(self, option_module).options()
+            if 'fq' in _module_options:
+                if 'fq' in options:
+                    options['fq'].append(_module_options['fq'])
+                else:
+                    options['fq'] = [_module_options['fq'], ]
+                del(_module_options['fq'])
+
+            options.update(_module_options)
         # Next line is for pre-2.6.5 python
         return dict((k.encode('utf8'), v) for k, v in options.items())
 
@@ -1161,4 +1171,5 @@ def params_from_dict(**kwargs):
                 v = unicode(v)
             v = v.encode('utf-8')
             utf8_params.append((k, v))
+
     return sorted(utf8_params)
