@@ -399,6 +399,7 @@ class SpatialQuery(object):
                 'sfield': self.field.name,
                 'pt': ','.join(str(p) for p in self.point),
                 'd': self.distance,
+                'sort': 'geodist() asc',
             })
             # Solr 3.x workaround for retrieving the distance
             # More info: http://wiki.apache.org/solr/SpatialSearch#Returning_the_distance
@@ -523,9 +524,15 @@ class BaseSearch(object):
     def options(self):
         options = {}
         for option_module in self.option_modules:
-            # More fq parameter is possible from different modules
+            # More q and fq parameter is possible from different modules
             # We need to handle this situation and not overwrite previous values
             _module_options = getattr(self, option_module).options()
+            if 'q' in _module_options:
+                if 'q' in options:
+                    options['q'].append(_module_options['q'])
+                else:
+                    options['q'] = [_module_options['q'], ]
+                del(_module_options['q'])
             if 'fq' in _module_options:
                 if 'fq' in options:
                     options['fq'].append(_module_options['fq'])
