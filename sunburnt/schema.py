@@ -689,6 +689,46 @@ class SolrResponse(object):
             value = None
         self.interesting_terms = value
 
+        self.spellcheck_data = self._lookup_spellcheck(details)
+
+    def _lookup_spellcheck(self, details):
+        spellcheck_data = details.get('spellcheck')
+        if not spellcheck_data:
+            return
+
+        try:
+            spellcheck = dict(spellcheck_data)
+            suggestions = spellcheck.get('suggestions')
+            if not suggestions:
+                return
+
+            sitems = suggestions
+            params = {}
+            for key, v in sitems:
+                if isinstance(v, (list, tuple)):
+                    v = dict(v)
+                drow = {key:v}
+                params.update(drow)
+
+            correctly_spelled = params.get('correctlySpelled')
+            if correctly_spelled:
+                return
+
+            collation = params.get('collation')
+            if not collation:
+                return
+
+            items = []
+            collation_items = collation.get('misspellingsAndCorrections')
+            if not collation_items:
+                return
+
+            for orig_term, suggested_term in collation_items:
+                items.append(dict(orig=orig_term, new_term=suggested_term))
+            return items
+        except:
+            return
+
     def __str__(self):
         return str(self.result)
 
